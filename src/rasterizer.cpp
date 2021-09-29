@@ -65,6 +65,42 @@ namespace CGL {
     }
   }
 
+  float calA(float xA, float yA, float xB, float yB)
+  {
+      return yA-yB;
+  }
+
+  float calB(float xA, float yA, float xB, float yB)
+  {
+    return xB-xA;
+  }
+
+  float calC(float xA, float yA, float xB, float yB)
+  {
+    return -xA*(yA-yB) -yA*(xB-xA);
+  }
+
+  float checkLine(float a, float b, float c, float x, float y)
+  {
+    return a*x + b*y + c;
+  }
+
+  bool checkInsideTriangle(
+      float a0, float b0, float c0,
+      float a1, float b1, float c1,
+      float a2, float b2, float c2,
+      float px, float py) {
+    float check0 = checkLine(a0,b0,c0,px,py);
+    float check1 = checkLine(a1,b1,c1,px,py);
+    float check2 = checkLine(a2,b2,c2,px,py);
+
+    return (
+        (check0 >= 0 && check1 >= 0 && check2 >= 0)
+        ||
+        (check0 <= 0 && check1 <= 0 && check2 <= 0)
+        );
+  }
+
   // Rasterize a triangle.
   void RasterizerImp::rasterize_triangle(float x0, float y0,
     float x1, float y1,
@@ -72,6 +108,32 @@ namespace CGL {
     Color color) {
     // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
 
+    float min_x = min(min(x0,x1),x2)-1;
+    float min_y = min(min(y0,y1),y2)-1;
+    float max_x = max(max(x0,x1),x2)+1;
+    float max_y = max(max(y0,y1),y2)+1;
+
+    //line  (x0,y0) -> (x1,y1)
+    float a0 = calA(x0,y0,x1,y1);
+    float b0 = calB(x0,y0,x1,y1);
+    float c0 = calC(x0,y0,x1,y1);
+    float a1 = calA(x1,y1,x2,y2);
+    float b1 = calB(x1,y1,x2,y2);
+    float c1 = calC(x1,y1,x2,y2);
+    float a2 = calA(x2,y2,x0,y0);
+    float b2 = calB(x2,y2,x0,y0);
+    float c2 = calC(x2,y2,x0,y0);
+
+      for (int x = floor(min_x); x < max_x; ++x) {
+        for (int y = floor(min_y); y < max_y; ++y) {
+          float px = float(x)+float(0.5);
+          float py = float(y)+float(0.5);
+          if(checkInsideTriangle(a0,b0,c0,a1,b1,c1,a2,b2,c2,px,py))
+          {
+            rasterize_point(x,y,color);
+          }
+        }
+      }
     // TODO: Task 2: Update to implement super-sampled rasterization
 
   }
