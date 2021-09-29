@@ -23,7 +23,12 @@ namespace CGL {
     // It is sufficient to use the same color for all supersamples of a pixel for points and lines (not triangles)
 
 
-    sample_buffer[y * width + x] = c;
+    int sqrt_sample_rate = sqrt(sample_rate);
+    for (int i = 0; i < sqrt_sample_rate; ++i) {
+      for (int j = 0; j < sqrt_sample_rate; ++j) {
+        sample_buffer[(y*sqrt_sample_rate+j) * width * sqrt_sample_rate + x*sqrt_sample_rate+i] = c;
+      }
+    }
   }
 
   // Rasterize a point: simple example to help you start familiarizing
@@ -108,6 +113,7 @@ namespace CGL {
     Color color) {
     // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
 
+    float sqrt_sample_rate = floor(sqrt(sample_rate));
     float min_x = min(min(x0,x1),x2)-1;
     float min_y = min(min(y0,y1),y2)-1;
     float max_x = max(max(x0,x1),x2)+1;
@@ -126,11 +132,17 @@ namespace CGL {
 
       for (int x = floor(min_x); x < max_x; ++x) {
         for (int y = floor(min_y); y < max_y; ++y) {
-          float px = float(x)+float(0.5);
-          float py = float(y)+float(0.5);
-          if(checkInsideTriangle(a0,b0,c0,a1,b1,c1,a2,b2,c2,px,py))
-          {
-            rasterize_point(x,y,color);
+          if (x < 0 || x >= width) continue;
+          if (y < 0 || y >= height) continue;
+          for (int i = 0; i < sqrt_sample_rate; ++i) {
+            for (int j = 0; j < sqrt_sample_rate; ++j) {
+              float px = float(x)+(0.5+i)/sqrt_sample_rate;
+              float py = float(y)+(0.5+j)/sqrt_sample_rate;
+              if(checkInsideTriangle(a0,b0,c0,a1,b1,c1,a2,b2,c2,px,py))
+              {
+                sample_buffer[(y*sqrt_sample_rate+j) * width * sqrt_sample_rate + x*sqrt_sample_rate+i] = color;
+              }
+            }
           }
         }
       }
@@ -171,7 +183,7 @@ namespace CGL {
     this->sample_rate = rate;
 
 
-    this->sample_buffer.resize(width * height, Color::White);
+    this->sample_buffer.resize(width * height * sample_rate, Color::White);
   }
 
 
@@ -185,7 +197,7 @@ namespace CGL {
     this->rgb_framebuffer_target = rgb_framebuffer;
 
 
-    this->sample_buffer.resize(width * height, Color::White);
+    this->sample_buffer.resize(width * height * sample_rate, Color::White);
   }
 
 
@@ -206,14 +218,18 @@ namespace CGL {
 
     for (int x = 0; x < width; ++x) {
       for (int y = 0; y < height; ++y) {
-        Color col = sample_buffer[y * width + x];
-
+        Color col = Color(0,0,0);
+        int sqrt_sample_rate = sqrt(sample_rate);
+        for (int i = 0; i < sqrt_sample_rate; ++i) {
+          for (int j = 0; j < sqrt_sample_rate; ++j) {
+            col += sample_buffer[(y*sqrt_sample_rate+j)*width*sqrt_sample_rate+x*sqrt_sample_rate+i];
+          }
+        }
         for (int k = 0; k < 3; ++k) {
-          this->rgb_framebuffer_target[3 * (y * width + x) + k] = (&col.r)[k] * 255;
+          this->rgb_framebuffer_target[3 * (y * width + x) + k] = (&col.r)[k] * 255/sample_rate;
         }
       }
     }
-
   }
 
   Rasterizer::~Rasterizer() { }
