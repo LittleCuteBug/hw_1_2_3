@@ -112,8 +112,17 @@ namespace CGL {
     float x2, float y2,
     Color color) {
     // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
-
+    // TODO: Task 2: Update to implement super-sampled rasterization
     float sqrt_sample_rate = floor(sqrt(sample_rate));
+
+    x0*=sqrt_sample_rate;
+    x1*=sqrt_sample_rate;
+    x2*=sqrt_sample_rate;
+
+    y0*=sqrt_sample_rate;
+    y1*=sqrt_sample_rate;
+    y2*=sqrt_sample_rate;
+
     float min_x = min(min(x0,x1),x2)-1;
     float min_y = min(min(y0,y1),y2)-1;
     float max_x = max(max(x0,x1),x2)+1;
@@ -130,24 +139,20 @@ namespace CGL {
     float b2 = calB(x2,y2,x0,y0);
     float c2 = calC(x2,y2,x0,y0);
 
+    int width_supersample = width * sqrt_sample_rate;
+    int height_supersample = height * sqrt_sample_rate;
+
       for (int x = floor(min_x); x < max_x; ++x) {
         for (int y = floor(min_y); y < max_y; ++y) {
-          if (x < 0 || x >= width) continue;
-          if (y < 0 || y >= height) continue;
-          for (int i = 0; i < sqrt_sample_rate; ++i) {
-            for (int j = 0; j < sqrt_sample_rate; ++j) {
-              float px = float(x)+(0.5+i)/sqrt_sample_rate;
-              float py = float(y)+(0.5+j)/sqrt_sample_rate;
-              if(checkInsideTriangle(a0,b0,c0,a1,b1,c1,a2,b2,c2,px,py))
-              {
-                sample_buffer[(y*sqrt_sample_rate+j) * width * sqrt_sample_rate + x*sqrt_sample_rate+i] = color;
-              }
-            }
+          if (x < 0 || x >= width_supersample) continue;
+          if (y < 0 || y >= height_supersample) continue;
+          float px = float(x) + 0.5;
+          float py = float(y) + 0.5;
+          if (checkInsideTriangle(a0, b0, c0, a1, b1, c1, a2, b2, c2, px, py)) {
+            sample_buffer[y * width_supersample + x] = color;
           }
         }
       }
-    // TODO: Task 2: Update to implement super-sampled rasterization
-
   }
 
 
