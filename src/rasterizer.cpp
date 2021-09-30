@@ -23,12 +23,8 @@ namespace CGL {
     // It is sufficient to use the same color for all supersamples of a pixel for points and lines (not triangles)
 
 
-    int sqrt_sample_rate = sqrt(sample_rate);
-    for (int i = 0; i < sqrt_sample_rate; ++i) {
-      for (int j = 0; j < sqrt_sample_rate; ++j) {
-        sample_buffer[(y*sqrt_sample_rate+j) * width * sqrt_sample_rate + x*sqrt_sample_rate+i] = c;
-      }
-    }
+    int scale_factor = sqrt(sample_rate);
+    sample_buffer[y * width * scale_factor + x] = c;
   }
 
   // Rasterize a point: simple example to help you start familiarizing
@@ -43,7 +39,12 @@ namespace CGL {
     if (sx < 0 || sx >= width) return;
     if (sy < 0 || sy >= height) return;
 
-    fill_pixel(sx, sy, color);
+    int scale_factor = sqrt(sample_rate);
+    for (int i = 0; i < scale_factor; ++i) {
+      for (int j = 0; j < scale_factor; ++j) {
+        fill_pixel(sx*scale_factor+i, sy*scale_factor+j, color);
+      }
+    }
     return;
   }
 
@@ -70,42 +71,6 @@ namespace CGL {
     }
   }
 
-  float calA(float xA, float yA, float xB, float yB)
-  {
-      return yA-yB;
-  }
-
-  float calB(float xA, float yA, float xB, float yB)
-  {
-    return xB-xA;
-  }
-
-  float calC(float xA, float yA, float xB, float yB)
-  {
-    return -xA*(yA-yB) -yA*(xB-xA);
-  }
-
-  float checkLine(float a, float b, float c, float x, float y)
-  {
-    return a*x + b*y + c;
-  }
-
-  bool checkInsideTriangle(
-      float a0, float b0, float c0,
-      float a1, float b1, float c1,
-      float a2, float b2, float c2,
-      float px, float py) {
-    float check0 = checkLine(a0,b0,c0,px,py);
-    float check1 = checkLine(a1,b1,c1,px,py);
-    float check2 = checkLine(a2,b2,c2,px,py);
-
-    return (
-        (check0 >= 0 && check1 >= 0 && check2 >= 0)
-        ||
-        (check0 <= 0 && check1 <= 0 && check2 <= 0)
-        );
-  }
-
   // Rasterize a triangle.
   void RasterizerImp::rasterize_triangle(float x0, float y0,
     float x1, float y1,
@@ -113,43 +78,45 @@ namespace CGL {
     Color color) {
     // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
     // TODO: Task 2: Update to implement super-sampled rasterization
-    float sqrt_sample_rate = floor(sqrt(sample_rate));
+    float scale_factor = floor(sqrt(sample_rate));
 
-    x0*=sqrt_sample_rate;
-    x1*=sqrt_sample_rate;
-    x2*=sqrt_sample_rate;
+    x0*=scale_factor;
+    x1*=scale_factor;
+    x2*=scale_factor;
 
-    y0*=sqrt_sample_rate;
-    y1*=sqrt_sample_rate;
-    y2*=sqrt_sample_rate;
+    y0*=scale_factor;
+    y1*=scale_factor;
+    y2*=scale_factor;
 
-    float min_x = min(min(x0,x1),x2)-1;
-    float min_y = min(min(y0,y1),y2)-1;
-    float max_x = max(max(x0,x1),x2)+1;
-    float max_y = max(max(y0,y1),y2)+1;
+    int min_x = floor(min(min(x0,x1),x2));
+    int min_y = floor(min(min(y0,y1),y2));
+    int max_x = ceil(max(max(x0,x1),x2));
+    int max_y = ceil(max(max(y0,y1),y2));
 
-    //line  (x0,y0) -> (x1,y1)
-    float a0 = calA(x0,y0,x1,y1);
-    float b0 = calB(x0,y0,x1,y1);
-    float c0 = calC(x0,y0,x1,y1);
-    float a1 = calA(x1,y1,x2,y2);
-    float b1 = calB(x1,y1,x2,y2);
-    float c1 = calC(x1,y1,x2,y2);
-    float a2 = calA(x2,y2,x0,y0);
-    float b2 = calB(x2,y2,x0,y0);
-    float c2 = calC(x2,y2,x0,y0);
+    Vector2D AB = Vector2D(x1-x0,y1-y0);
+    Vector2D BC = Vector2D(x2-x1,y2-y1);
+    Vector2D CA = Vector2D(x0-x2,y0-y2);
 
-    int width_supersample = width * sqrt_sample_rate;
-    int height_supersample = height * sqrt_sample_rate;
+    int width_scale = width * scale_factor;
+    int height_scale = height * scale_factor;
 
-      for (int x = floor(min_x); x < max_x; ++x) {
-        for (int y = floor(min_y); y < max_y; ++y) {
-          if (x < 0 || x >= width_supersample) continue;
-          if (y < 0 || y >= height_supersample) continue;
-          float px = float(x) + 0.5;
-          float py = float(y) + 0.5;
-          if (checkInsideTriangle(a0, b0, c0, a1, b1, c1, a2, b2, c2, px, py)) {
-            sample_buffer[y * width_supersample + x] = color;
+      for (int x = min_x; x <= max_x; ++x) {
+        if (x < 0 || x >= width_scale) continue;
+        for (int y = min_y; y <= max_y; ++y) {
+          if (y < 0 || y >= height_scale) continue;
+          float px = x + 0.5f;
+          float py = y + 0.5f;
+
+          Vector2D AX = Vector2D(px-x0,py-y0);
+          Vector2D BX = Vector2D(px-x1,py-y1);
+          Vector2D CX = Vector2D(px-x2,py-y2);
+
+          double flag1 = cross(AX,AB);
+          double flag2 = cross(BX,BC);
+          double flag3 = cross(CX,CA);
+
+          if ((flag1>=0&&flag2>=0&&flag3>=0) || (flag1<=0&&flag2<=0&&flag3<=0)) {
+            fill_pixel(x,y,color);
           }
         }
       }
@@ -224,10 +191,10 @@ namespace CGL {
     for (int x = 0; x < width; ++x) {
       for (int y = 0; y < height; ++y) {
         Color col = Color(0,0,0);
-        int sqrt_sample_rate = sqrt(sample_rate);
-        for (int i = 0; i < sqrt_sample_rate; ++i) {
-          for (int j = 0; j < sqrt_sample_rate; ++j) {
-            col += sample_buffer[(y*sqrt_sample_rate+j)*width*sqrt_sample_rate+x*sqrt_sample_rate+i];
+        int scale_factor = sqrt(sample_rate);
+        for (int i = 0; i < scale_factor; ++i) {
+          for (int j = 0; j < scale_factor; ++j) {
+            col += sample_buffer[(y * scale_factor + j) * width * scale_factor + x * scale_factor + i];
           }
         }
         for (int k = 0; k < 3; ++k) {
