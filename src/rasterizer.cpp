@@ -24,6 +24,8 @@ namespace CGL {
 
 
     int scale_factor = sqrt(sample_rate);
+    if(x<0||x>=width*scale_factor) return;
+    if(y<0||y>=height*scale_factor) return;
     sample_buffer[y * width * scale_factor + x] = c;
   }
 
@@ -48,27 +50,67 @@ namespace CGL {
     return;
   }
 
+  vector<pair<int,int>> draw_line(float _x0, float _y0, float _x1, float _y1) {
+    vector<pair<int,int>> points;
+    if (_x0 > _x1) {
+      swap(_x0, _x1); swap(_y0, _y1);
+    }
+
+    int x0 = _x0;
+    int y0 = _y0;
+    int x1 = _x1;
+    int y1 = _y1;
+
+//    cout<<"drawline "<<x0<<" "<<y0<<" "<<x1<<" "<<y1<<endl;
+
+    int a = x1-x0;
+    int b = y1-y0;
+
+    int x = 0;
+    int y = 0;
+
+    bool neg_y = (b<0);
+
+    if(neg_y) b = -b;
+
+    bool is_swap = a<b;
+
+    if(is_swap)
+      swap(a,b);
+
+    int d = 2*b-a;
+    while (true)
+    {
+      //draw (x,y)
+      int dx = x;
+      int dy = y;
+      if(is_swap)
+        swap(dx,dy);
+      if(neg_y)
+        dy = -dy;
+      points.push_back(pair<int,int> (x0+dx, y0+dy));
+
+      if (x==a) break;
+      if (d>0) {
+        y++;
+        d-=2*a;
+      }
+      x++;
+      d+=2*b;
+    }
+    return points;
+  }
+
   // Rasterize a line.
   void RasterizerImp::rasterize_line(float x0, float y0,
     float x1, float y1,
     Color color) {
-    if (x0 > x1) {
-      swap(x0, x1); swap(y0, y1);
+    for( auto point : draw_line(x0,y0,x1,y1)) {
+      rasterize_point(point.first, point.second, color);
     }
-
-    float pt[] = { x0,y0 };
-    float m = (y1 - y0) / (x1 - x0);
-    float dpt[] = { 1,m };
-    int steep = abs(m) > 1;
-    if (steep) {
-      dpt[0] = x1 == x0 ? 0 : 1 / abs(m);
-      dpt[1] = x1 == x0 ? (y1 - y0) / abs(y1 - y0) : m / abs(m);
-    }
-
-    while (floor(pt[0]) <= floor(x1) && abs(pt[1] - y0) <= abs(y1 - y0)) {
-      rasterize_point(pt[0], pt[1], color);
-      pt[0] += dpt[0]; pt[1] += dpt[1];
-    }
+//    rasterize_point(x0,y0, Color(0,1,0));
+//    rasterize_point(x1,y1, Color(0,1,0));
+//    cout<<"line: "<<x0<<" "<<y0<<"  "<<x1<<" "<<y1<<endl;
   }
 
   // Rasterize a triangle.
@@ -88,38 +130,95 @@ namespace CGL {
     y1*=scale_factor;
     y2*=scale_factor;
 
-    int min_x = floor(min(min(x0,x1),x2));
-    int min_y = floor(min(min(y0,y1),y2));
-    int max_x = ceil(max(max(x0,x1),x2));
-    int max_y = ceil(max(max(y0,y1),y2));
 
-    Vector2D AB = Vector2D(x1-x0,y1-y0);
-    Vector2D BC = Vector2D(x2-x1,y2-y1);
-    Vector2D CA = Vector2D(x0-x2,y0-y2);
+    if(x0<x1){
+      swap(x0,x1);
+      swap(y0,y1);
+    }
 
-    int width_scale = width * scale_factor;
-    int height_scale = height * scale_factor;
+    if(x0<x2){
+      swap(x0,x2);
+      swap(y0,y2);
+    }
 
-      for (int x = min_x; x <= max_x; ++x) {
-        if (x < 0 || x >= width_scale) continue;
-        for (int y = min_y; y <= max_y; ++y) {
-          if (y < 0 || y >= height_scale) continue;
-          float px = x + 0.5f;
-          float py = y + 0.5f;
+    if(x1>x2){
+      swap(x1,x2);
+      swap(y1,y2);
+    }
 
-          Vector2D AX = Vector2D(px-x0,py-y0);
-          Vector2D BX = Vector2D(px-x1,py-y1);
-          Vector2D CX = Vector2D(px-x2,py-y2);
+    // x0 > x2 > x1
+    vector<pair<int,int>> AB = draw_line(x0,y0,x1,y1);
+    vector<pair<int,int>> BC = draw_line(x1,y1,x2,y2);
+    vector<pair<int,int>> CA = draw_line(x0,y0,x2,y2);
 
-          double flag1 = cross(AX,AB);
-          double flag2 = cross(BX,BC);
-          double flag3 = cross(CX,CA);
-
-          if ((flag1>=0&&flag2>=0&&flag3>=0) || (flag1<=0&&flag2<=0&&flag3<=0)) {
-            fill_pixel(x,y,color);
-          }
-        }
+    int i = 0;
+    int j = 0;
+    int x = min(AB[0].first,BC[0].first);
+    int min_y = INT_MAX;
+    int max_y = INT_MIN;
+    while (i<AB.size() && j<BC.size())
+    {
+      while (i<AB.size() && AB[i].first == x) {
+        min_y = min(AB[i].second, min_y);
+        max_y = max(AB[i].second, max_y);
+        i++;
       }
+      while (j<BC.size() && BC[j].first == x) {
+        min_y = min(BC[j].second, min_y);
+        max_y = max(BC[j].second, max_y);
+        j++;
+      }
+      if(min_y != INT_MAX && max_y != INT_MIN)
+        for (int y = min_y; y <= max_y; ++y) {
+          fill_pixel(x,y,color);
+        }
+      x++;
+      min_y = INT_MAX;
+      max_y = INT_MIN;
+    }
+
+    i = AB.size()-1;
+    j = CA.size()-1;
+    x = max(AB[AB.size()-1].first,CA[CA.size()-1].first);
+    min_y = INT_MAX;
+    max_y = INT_MIN;
+    while (i>=0 && j>=0)
+    {
+      while (i>=0 && AB[i].first == x) {
+        min_y = min(AB[i].second, min_y);
+        max_y = max(AB[i].second, max_y);
+        i--;
+      }
+      while (j>=0 && CA[j].first == x) {
+        min_y = min(CA[j].second, min_y);
+        max_y = max(CA[j].second, max_y);
+        j--;
+      }
+      if(min_y != INT_MAX && max_y != INT_MIN)
+        for (int y = min_y; y <= max_y; ++y) {
+          fill_pixel(x,y,color);
+        }
+      x--;
+      min_y = INT_MAX;
+      max_y = INT_MIN;
+    }
+
+//    for( auto point : AB) {
+//      fill_pixel(point.first,point.second,Color(0,0,0.1));
+//    }
+//    for( auto point : BC) {
+//      fill_pixel(point.first,point.second,Color(0,0,0.1));
+//    }
+//    for( auto point : CA) {
+//      fill_pixel(point.first,point.second,Color(0,0,0.1));
+//    }
+//
+//    fill_pixel(x0,y0,Color(1,0,0));
+//    fill_pixel(x1,y1,Color(1,0,0));
+//    fill_pixel(x2,y2,Color(1,0,0));
+
+//      cout<<"triangle: "<<x0<<" "<<y0<<"  "<<x1<<" "<<y1<<"  "<<x2<<" "<<y2<<endl;
+
   }
 
 
