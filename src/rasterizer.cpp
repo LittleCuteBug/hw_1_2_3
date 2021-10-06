@@ -56,12 +56,10 @@ namespace CGL {
       swap(_x0, _x1); swap(_y0, _y1);
     }
 
-    int x0 = _x0;
-    int y0 = _y0;
-    int x1 = _x1;
-    int y1 = _y1;
-
-//    cout<<"drawline "<<x0<<" "<<y0<<" "<<x1<<" "<<y1<<endl;
+    int x0 = floor(_x0);
+    int y0 = floor(_y0);
+    int x1 = floor(_x1);
+    int y1 = floor(_y1);
 
     int a = x1-x0;
     int b = y1-y0;
@@ -105,12 +103,25 @@ namespace CGL {
   void RasterizerImp::rasterize_line(float x0, float y0,
     float x1, float y1,
     Color color) {
-    for( auto point : draw_line(x0,y0,x1,y1)) {
+    for( auto point : draw_line(x0+0.5f,y0+0.5f,x1+0.5f,y1+0.5f)) {
       rasterize_point(point.first, point.second, color);
     }
-//    rasterize_point(x0,y0, Color(0,1,0));
-//    rasterize_point(x1,y1, Color(0,1,0));
-//    cout<<"line: "<<x0<<" "<<y0<<"  "<<x1<<" "<<y1<<endl;
+  }
+
+  bool inside_triangle(float x, float y, float x0, float y0, float x1, float y1, float x2, float y2){
+
+    Vector2D AB = Vector2D(x1-x0, y1-y0);
+    Vector2D BC = Vector2D(x2-x1, y2-y1);
+    Vector2D CA = Vector2D(x0-x2, y0-y2);
+    Vector2D AX = Vector2D(x-x0,y-y0);
+    Vector2D BX = Vector2D(x-x1,y-y1);
+    Vector2D CX = Vector2D(x-x2,y-y2);
+
+    float a = cross(AB,AX);
+    float b = cross(BC,BX);
+    float c = cross(CA,CX);
+
+    return (a==0||b==0||c==0||(a>0&&b>0&&c>0)||(a<0&&b<0&&c<0));
   }
 
   // Rasterize a triangle.
@@ -122,14 +133,13 @@ namespace CGL {
     // TODO: Task 2: Update to implement super-sampled rasterization
     float scale_factor = floor(sqrt(sample_rate));
 
-    x0*=scale_factor;
-    x1*=scale_factor;
-    x2*=scale_factor;
+    x0=(x0+0.5f)*scale_factor;
+    x1=(x1+0.5f)*scale_factor;
+    x2=(x2+0.5f)*scale_factor;
 
-    y0*=scale_factor;
-    y1*=scale_factor;
-    y2*=scale_factor;
-
+    y0=(y0+0.5f)*scale_factor;
+    y1=(y1+0.5f)*scale_factor;
+    y2=(y2+0.5f)*scale_factor;
 
     if(x0<x1){
       swap(x0,x1);
@@ -169,8 +179,9 @@ namespace CGL {
         j++;
       }
       if(min_y != INT_MAX && max_y != INT_MIN)
-        for (int y = min_y; y <= max_y; ++y) {
-          fill_pixel(x,y,color);
+        for (int y = min_y-1; y <= max_y+1; ++y) {
+          if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
+            fill_pixel(x,y,color);
         }
       x++;
       min_y = INT_MAX;
@@ -195,29 +206,14 @@ namespace CGL {
         j--;
       }
       if(min_y != INT_MAX && max_y != INT_MIN)
-        for (int y = min_y; y <= max_y; ++y) {
-          fill_pixel(x,y,color);
+        for (int y = min_y-1; y <= max_y+1; ++y) {
+          if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
+            fill_pixel(x,y,color);
         }
       x--;
       min_y = INT_MAX;
       max_y = INT_MIN;
     }
-
-//    for( auto point : AB) {
-//      fill_pixel(point.first,point.second,Color(0,0,0.1));
-//    }
-//    for( auto point : BC) {
-//      fill_pixel(point.first,point.second,Color(0,0,0.1));
-//    }
-//    for( auto point : CA) {
-//      fill_pixel(point.first,point.second,Color(0,0,0.1));
-//    }
-//
-//    fill_pixel(x0,y0,Color(1,0,0));
-//    fill_pixel(x1,y1,Color(1,0,0));
-//    fill_pixel(x2,y2,Color(1,0,0));
-
-//      cout<<"triangle: "<<x0<<" "<<y0<<"  "<<x1<<" "<<y1<<"  "<<x2<<" "<<y2<<endl;
 
   }
 
@@ -286,11 +282,10 @@ namespace CGL {
   void RasterizerImp::resolve_to_framebuffer() {
     // TODO: Task 2: You will likely want to update this function for supersampling support
 
-
+    int scale_factor = sqrt(sample_rate);
     for (int x = 0; x < width; ++x) {
       for (int y = 0; y < height; ++y) {
         Color col = Color(0,0,0);
-        int scale_factor = sqrt(sample_rate);
         for (int i = 0; i < scale_factor; ++i) {
           for (int j = 0; j < scale_factor; ++j) {
             col += sample_buffer[(y * scale_factor + j) * width * scale_factor + x * scale_factor + i];

@@ -307,10 +307,10 @@ void DrawRend::redraw() {
   svg.draw(software_rasterizer, ndc_to_screen * svg_to_ndc[current_svg]);
 
   // draw canvas outline
-  Vector2D a = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(0, 0)); a.x--; a.y++;
-  Vector2D b = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(svg.width, 0)); b.x++; b.y++;
-  Vector2D c = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(0, svg.height)); c.x--; c.y--;
-  Vector2D d = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(svg.width, svg.height)); d.x++; d.y--;
+  Vector2D a = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(0, 0)); a.x--; a.y--;
+  Vector2D b = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(svg.width, 0)); b.x++; b.y--;
+  Vector2D c = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(0, svg.height)); c.x--; c.y++;
+  Vector2D d = ndc_to_screen * svg_to_ndc[current_svg] * (Vector2D(svg.width, svg.height)); d.x++; d.y++;
 
   software_rasterizer->rasterize_line(a.x, a.y, b.x, b.y, Color::Black);
   software_rasterizer->rasterize_line(a.x, a.y, c.x, c.y, Color::Black);
