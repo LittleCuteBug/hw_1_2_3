@@ -124,23 +124,8 @@ namespace CGL {
     return ((a>=0&&b>=0&&c>=0)||(a<=0&&b<=0&&c<=0));
   }
 
-  // Rasterize a triangle.
-  void RasterizerImp::rasterize_triangle(float x0, float y0,
-    float x1, float y1,
-    float x2, float y2,
-    Color color) {
-    // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
-    // TODO: Task 2: Update to implement super-sampled rasterization
-    float scale_factor = floor(sqrt(sample_rate));
-
-    x0=(x0+0.5f)*scale_factor;
-    x1=(x1+0.5f)*scale_factor;
-    x2=(x2+0.5f)*scale_factor;
-
-    y0=(y0+0.5f)*scale_factor;
-    y1=(y1+0.5f)*scale_factor;
-    y2=(y2+0.5f)*scale_factor;
-
+  vector<pair<int,int>> draw_triangle(float x0, float y0, float x1, float y1, float x2, float y2) {
+    vector<pair<int,int>> points;
     if(x0<x1){
       swap(x0,x1);
       swap(y0,y1);
@@ -181,7 +166,7 @@ namespace CGL {
       if(min_y != INT_MAX && max_y != INT_MIN)
         for (int y = min_y-1; y <= max_y+1; ++y) {
           if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
-            fill_pixel(x,y,color);
+            points.push_back(pair<int,int> (x, y));
         }
       x++;
       min_y = INT_MAX;
@@ -208,15 +193,50 @@ namespace CGL {
       if(min_y != INT_MAX && max_y != INT_MIN)
         for (int y = min_y-1; y <= max_y+1; ++y) {
           if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
-            fill_pixel(x,y,color);
+            points.push_back(pair<int,int> (x, y));
         }
       x--;
       min_y = INT_MAX;
       max_y = INT_MIN;
     }
+    return points;
+  }
+
+  // Rasterize a triangle.
+  void RasterizerImp::rasterize_triangle(float x0, float y0,
+    float x1, float y1,
+    float x2, float y2,
+    Color color) {
+    // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
+    // TODO: Task 2: Update to implement super-sampled rasterization
+    float scale_factor = floor(sqrt(sample_rate));
+
+    x0=(x0+0.5f)*scale_factor;
+    x1=(x1+0.5f)*scale_factor;
+    x2=(x2+0.5f)*scale_factor;
+
+    y0=(y0+0.5f)*scale_factor;
+    y1=(y1+0.5f)*scale_factor;
+    y2=(y2+0.5f)*scale_factor;
+
+    for( auto point : draw_triangle(x0,y0,x1,y1,x2,y2)) {
+      fill_pixel(point.first, point.second, color);
+    }
 
   }
 
+  float cal_area(float x0, float y0, float x1, float y1, float x2, float y2) {
+    Matrix3x3 matrix3X3 = Matrix3x3(x0,y0,1,x1,y1,1,x2,y2,1);
+    return 0.5f * float(matrix3X3.det());
+  }
+
+  Color cal_color(float x, float y, float x0, float y0, Color c0, float x1, float y1, Color c1, float x2, float y2, Color c2) {
+    float S = cal_area(x0,y0,x1,y1,x2,y2);
+    float a = cal_area(x,y,x1,y1,x2,y2);
+    float b = cal_area(x0,y0,x,y,x2,y2);
+    float c = cal_area(x0,y0,x1,y1,x,y);
+    return c0*(a/S) + c1*(b/S) + c2*(c/S);
+  }
 
   void RasterizerImp::rasterize_interpolated_color_triangle(float x0, float y0, Color c0,
     float x1, float y1, Color c1,
@@ -224,9 +244,20 @@ namespace CGL {
   {
     // TODO: Task 4: Rasterize the triangle, calculating barycentric coordinates and using them to interpolate vertex colors across the triangle
     // Hint: You can reuse code from rasterize_triangle
+    float scale_factor = floor(sqrt(sample_rate));
 
+    x0=(x0+0.5f)*scale_factor;
+    x1=(x1+0.5f)*scale_factor;
+    x2=(x2+0.5f)*scale_factor;
 
+    y0=(y0+0.5f)*scale_factor;
+    y1=(y1+0.5f)*scale_factor;
+    y2=(y2+0.5f)*scale_factor;
 
+    for( auto point : draw_triangle(x0,y0,x1,y1,x2,y2)) {
+      Color color = cal_color(point.first, point.second, x0, y0, c0, x1, y1, c1, x2, y2, c2);
+      fill_pixel(point.first, point.second, color);
+    }
   }
 
 
