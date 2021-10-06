@@ -103,7 +103,8 @@ namespace CGL {
   void RasterizerImp::rasterize_line(float x0, float y0,
     float x1, float y1,
     Color color) {
-    for( auto point : draw_line(x0+0.5f,y0+0.5f,x1+0.5f,y1+0.5f)) {
+    vector<pair<int,int>> points = draw_line(x0+0.5f,y0+0.5f,x1+0.5f,y1+0.5f);
+    for( auto point : points) {
       rasterize_point(point.first, point.second, color);
     }
   }
@@ -148,7 +149,8 @@ namespace CGL {
 
     int i = 0;
     int j = 0;
-    int x = min(AB[0].first,BC[0].first);
+    int x_start = min(AB[0].first,BC[0].first);
+    int x = x_start;
     int min_y = INT_MAX;
     int max_y = INT_MIN;
     while (i<AB.size() && j<BC.size())
@@ -163,11 +165,17 @@ namespace CGL {
         max_y = max(BC[j].second, max_y);
         j++;
       }
-      if(min_y != INT_MAX && max_y != INT_MIN)
-        for (int y = min_y-1; y <= max_y+1; ++y) {
-          if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
-            points.push_back(pair<int,int> (x, y));
+      if(min_y != INT_MAX && max_y != INT_MIN) {
+        for (int y = min_y+1; y < max_y; ++y) {
+          if(x!= x_start || inside_triangle(x + 0.5f, y + 0.5f, x0, y0, x1, y1, x2, y2))
+            points.push_back(pair<int, int>(x, y));
         }
+        vector<int> arr = {min_y-1, min_y, max_y, max_y+1};
+        for (int y : arr) {
+          if (inside_triangle(x + 0.5f, y + 0.5f, x0, y0, x1, y1, x2, y2))
+            points.push_back(pair<int, int>(x, y));
+        }
+      }
       x++;
       min_y = INT_MAX;
       max_y = INT_MIN;
@@ -175,7 +183,8 @@ namespace CGL {
 
     i = AB.size()-1;
     j = CA.size()-1;
-    x = max(AB[AB.size()-1].first,CA[CA.size()-1].first);
+    x_start = max(AB[AB.size()-1].first,CA[CA.size()-1].first);
+    x = x_start;
     min_y = INT_MAX;
     max_y = INT_MIN;
     while (i>=0 && j>=0)
@@ -190,11 +199,17 @@ namespace CGL {
         max_y = max(CA[j].second, max_y);
         j--;
       }
-      if(min_y != INT_MAX && max_y != INT_MIN)
-        for (int y = min_y-1; y <= max_y+1; ++y) {
-          if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
-            points.push_back(pair<int,int> (x, y));
+      if(min_y != INT_MAX && max_y != INT_MIN) {
+        for (int y = min_y+1; y < max_y; ++y) {
+          if(x!= x_start || inside_triangle(x + 0.5f, y + 0.5f, x0, y0, x1, y1, x2, y2))
+            points.push_back(pair<int, int>(x, y));
         }
+        vector<int> arr = {min_y-1, min_y, max_y, max_y+1};
+        for (int y : arr) {
+          if (inside_triangle(x + 0.5f, y + 0.5f, x0, y0, x1, y1, x2, y2))
+            points.push_back(pair<int, int>(x, y));
+        }
+      }
       x--;
       min_y = INT_MAX;
       max_y = INT_MIN;
@@ -219,7 +234,8 @@ namespace CGL {
     y1=(y1+0.5f)*scale_factor;
     y2=(y2+0.5f)*scale_factor;
 
-    for( auto point : draw_triangle(x0,y0,x1,y1,x2,y2)) {
+    vector<pair<int,int>> points = draw_triangle(x0,y0,x1,y1,x2,y2);
+    for( auto point : points) {
       fill_pixel(point.first, point.second, color);
     }
 
@@ -254,7 +270,8 @@ namespace CGL {
     y1=(y1+0.5f)*scale_factor;
     y2=(y2+0.5f)*scale_factor;
 
-    for( auto point : draw_triangle(x0,y0,x1,y1,x2,y2)) {
+    vector<pair<int,int>> points = draw_triangle(x0,y0,x1,y1,x2,y2);
+    for( auto point : points) {
       Color color = cal_color(point.first, point.second, x0, y0, c0, x1, y1, c1, x2, y2, c2);
       fill_pixel(point.first, point.second, color);
     }
