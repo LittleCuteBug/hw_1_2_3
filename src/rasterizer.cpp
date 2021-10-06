@@ -121,7 +121,7 @@ namespace CGL {
     float b = cross(BC,BX);
     float c = cross(CA,CX);
 
-    return (a==0||b==0||c==0||(a>0&&b>0&&c>0)||(a<0&&b<0&&c<0));
+    return ((a>=0&&b>=0&&c>=0)||(a<=0&&b<=0&&c<=0));
   }
 
   // Rasterize a triangle.
