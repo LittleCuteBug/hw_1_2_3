@@ -179,8 +179,8 @@ namespace CGL {
         j++;
       }
       if(min_y != INT_MAX && max_y != INT_MIN)
-        for (int y = min_y-1; y <= max_y+1; ++y) {
-          if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
+        for (int y = min_y; y <= max_y; ++y) {
+          //if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
             fill_pixel(x,y,color);
         }
       x++;
@@ -206,8 +206,8 @@ namespace CGL {
         j--;
       }
       if(min_y != INT_MAX && max_y != INT_MIN)
-        for (int y = min_y-1; y <= max_y+1; ++y) {
-          if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
+        for (int y = min_y; y <= max_y; ++y) {
+          //if(inside_triangle(x+0.5f,y+0.5f,x0,y0,x1,y1,x2,y2))
             fill_pixel(x,y,color);
         }
       x--;
