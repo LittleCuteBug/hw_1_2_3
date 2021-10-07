@@ -50,54 +50,25 @@ namespace CGL {
     return;
   }
 
-  vector<pair<int,int>> draw_line(float _x0, float _y0, float _x1, float _y1) {
+  vector<pair<int,int>> draw_line(float x0, float y0, float x1, float y1) {
     vector<pair<int,int>> points;
-    if (_x0 > _x1) {
-      swap(_x0, _x1); swap(_y0, _y1);
-    }
-
-    int x0 = _x0;
-    int y0 = _y0;
-    int x1 = _x1;
-    int y1 = _y1;
-
-//    cout<<"drawline "<<x0<<" "<<y0<<" "<<x1<<" "<<y1<<endl;
-
-    int a = x1-x0;
-    int b = y1-y0;
-
-    int x = 0;
-    int y = 0;
-
-    bool neg_y = (b<0);
-
-    if(neg_y) b = -b;
-
-    bool is_swap = a<b;
-
-    if(is_swap)
-      swap(a,b);
-
-    int d = 2*b-a;
-    while (true)
-    {
-      //draw (x,y)
-      int dx = x;
-      int dy = y;
-      if(is_swap)
-        swap(dx,dy);
-      if(neg_y)
-        dy = -dy;
-      points.push_back(pair<int,int> (x0+dx, y0+dy));
-
-      if (x==a) break;
-      if (d>0) {
-        y++;
-        d-=2*a;
+      if (x0 > x1) {
+        swap(x0, x1); swap(y0, y1);
       }
-      x++;
-      d+=2*b;
-    }
+
+      float pt[] = { x0,y0 };
+      float m = (y1 - y0) / (x1 - x0);
+      float dpt[] = { 1,m };
+      int steep = abs(m) > 1;
+      if (steep) {
+        dpt[0] = x1 == x0 ? 0 : 1 / abs(m);
+        dpt[1] = x1 == x0 ? (y1 - y0) / abs(y1 - y0) : m / abs(m);
+      }
+
+      while (floor(pt[0]) <= floor(x1) && abs(pt[1] - y0) <= abs(y1 - y0)) {
+        points.push_back(pair<int,int> (pt[0], pt[1]));
+        pt[0] += dpt[0]; pt[1] += dpt[1];
+      }
     return points;
   }
 
@@ -105,7 +76,7 @@ namespace CGL {
   void RasterizerImp::rasterize_line(float x0, float y0,
     float x1, float y1,
     Color color) {
-    for( auto point : draw_line(x0,y0,x1,y1)) {
+    for( auto point : draw_line(x0+0.5f,y0+0.5f,x1+0.5f,y1+0.5f)) {
       rasterize_point(point.first, point.second, color);
     }
 //    rasterize_point(x0,y0, Color(0,1,0));
@@ -122,13 +93,13 @@ namespace CGL {
     // TODO: Task 2: Update to implement super-sampled rasterization
     float scale_factor = floor(sqrt(sample_rate));
 
-    x0*=scale_factor;
-    x1*=scale_factor;
-    x2*=scale_factor;
+    x0=(x0+0.5f)*scale_factor;
+    x1=(x1+0.5f)*scale_factor;
+    x2=(x2+0.5f)*scale_factor;
 
-    y0*=scale_factor;
-    y1*=scale_factor;
-    y2*=scale_factor;
+    y0=(y0+0.5f)*scale_factor;
+    y1=(y1+0.5f)*scale_factor;
+    y2=(y2+0.5f)*scale_factor;
 
 
     if(x0<x1){
@@ -203,19 +174,15 @@ namespace CGL {
       max_y = INT_MIN;
     }
 
-//    for( auto point : AB) {
-//      fill_pixel(point.first,point.second,Color(0,0,0.1));
-//    }
-//    for( auto point : BC) {
-//      fill_pixel(point.first,point.second,Color(0,0,0.1));
-//    }
-//    for( auto point : CA) {
-//      fill_pixel(point.first,point.second,Color(0,0,0.1));
-//    }
-//
-//    fill_pixel(x0,y0,Color(1,0,0));
-//    fill_pixel(x1,y1,Color(1,0,0));
-//    fill_pixel(x2,y2,Color(1,0,0));
+    for( auto point : AB) {
+      fill_pixel(point.first,point.second,Color(0,0,1));
+    }
+    for( auto point : BC) {
+      fill_pixel(point.first,point.second,Color(0,0,1));
+    }
+    for( auto point : CA) {
+      fill_pixel(point.first,point.second,Color(0,0,1));
+    }
 
 //      cout<<"triangle: "<<x0<<" "<<y0<<"  "<<x1<<" "<<y1<<"  "<<x2<<" "<<y2<<endl;
 
