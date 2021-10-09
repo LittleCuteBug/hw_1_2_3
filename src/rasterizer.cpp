@@ -277,6 +277,14 @@ namespace CGL {
     }
   }
 
+  Vector2D transfer_point(float x, float y, float x0, float y0, float x1, float y1, float x2, float y2,
+                          float u0, float v0, float u1, float v1, float u2, float v2) {
+    float S = cal_area(x0,y0,x1,y1,x2,y2);
+    float a = cal_area(x,y,x1,y1,x2,y2);
+    float b = cal_area(x0,y0,x,y,x2,y2);
+    float c = cal_area(x0,y0,x1,y1,x,y);
+    return Vector2D(u0,v0)*(a/S) + Vector2D(u1,v1)*(b/S) + Vector2D(u2,v2)*(c/S);
+  }
 
   void RasterizerImp::rasterize_textured_triangle(float x0, float y0, float u0, float v0,
     float x1, float y1, float u1, float v1,
@@ -287,9 +295,36 @@ namespace CGL {
     // TODO: Task 6: Set the correct barycentric differentials in the SampleParams struct.
     // Hint: You can reuse code from rasterize_triangle/rasterize_interpolated_color_triangle
 
+    float scale_factor = floor(sqrt(sample_rate));
 
+    x0=(x0+0.5f)*scale_factor;
+    x1=(x1+0.5f)*scale_factor;
+    x2=(x2+0.5f)*scale_factor;
 
+    y0=(y0+0.5f)*scale_factor;
+    y1=(y1+0.5f)*scale_factor;
+    y2=(y2+0.5f)*scale_factor;
 
+    vector<pair<int,int>> points = draw_triangle(x0,y0,x1,y1,x2,y2);
+    for( auto point : points) {
+      Vector2D p_uv = transfer_point(point.first + 0.5f, point.second + 0.5f,x0,y0,x1,y1,x2,y2,u0,v0,u1,v1,u2,v2);
+//      Vector2D p_dx_uv = transfer_point(point.first + 1.5f, point.second + 0.5f, x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2);
+//      Vector2D p_dy_uv = transfer_point(point.first + 0.5f, point.second + 1.5f, x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2);
+//      SampleParams sampleParams;
+//      sampleParams.p_uv = p_uv;
+//      sampleParams.psm = psm;
+//      sampleParams.lsm = lsm;
+
+//      cout<< point.first + 0.5f << " " << point.second + 0.5f << " " << x0 << " " << y0 << " " << x1 << " " << y1 << " " << x2 << " " << y2 <<endl;
+//      cout<< p_uv.x << " " << p_uv.y << " " << u0 << " " << v0 << " " << u1 << " " << v1 << " " << u2 << " " << v2 <<endl;
+//      cout<< endl;
+      Color color;
+      if (psm == 0)
+        color = tex.sample_nearest(p_uv,0);
+      else
+        color = tex.sample_bilinear(p_uv,0);
+      fill_pixel(point.first, point.second, color);
+    }
   }
 
   void RasterizerImp::set_sample_rate(unsigned int rate) {

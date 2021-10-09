@@ -30,22 +30,37 @@ namespace CGL {
     // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
 
+    int x = round(uv.x*width);
+    int y = round(uv.y*height);
 
-
-
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+    if (x<0) x=0;
+    if (y<0) y=0;
+    if (x >= width) x = width-1;
+    if (y >= height) y = height-1;
+    return mip.get_texel(x, y);
   }
 
   Color Texture::sample_bilinear(Vector2D uv, int level) {
     // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
+    int x = round(uv.x*width);
+    int y = round(uv.y*height);
+    int x_1 = x+1, y_1 = y+1;
+    if (x<0) {
+      x=0;
+      x_1 = x;
+    }
+    if (y<0) {
+      y=0;
+      y_1 = y;
+    }
+    if (x >= width) x = width-1;
+    if (y >= height) y = height-1;
 
+    if (x_1 >= width) x_1 = width-1;
+    if (y_1 >= height) y_1 = height-1;
 
-
-
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+    return (mip.get_texel(x, y) + mip.get_texel(x_1,y) + mip.get_texel(x,y_1) + mip.get_texel(x_1, y_1))*0.25;
   }
 
 
