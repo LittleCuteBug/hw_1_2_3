@@ -308,21 +308,16 @@ namespace CGL {
     vector<pair<int,int>> points = draw_triangle(x0,y0,x1,y1,x2,y2);
     for( auto point : points) {
       Vector2D p_uv = transfer_point(point.first + 0.5f, point.second + 0.5f,x0,y0,x1,y1,x2,y2,u0,v0,u1,v1,u2,v2);
-//      Vector2D p_dx_uv = transfer_point(point.first + 1.5f, point.second + 0.5f, x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2);
-//      Vector2D p_dy_uv = transfer_point(point.first + 0.5f, point.second + 1.5f, x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2);
-//      SampleParams sampleParams;
-//      sampleParams.p_uv = p_uv;
-//      sampleParams.psm = psm;
-//      sampleParams.lsm = lsm;
-
-//      cout<< point.first + 0.5f << " " << point.second + 0.5f << " " << x0 << " " << y0 << " " << x1 << " " << y1 << " " << x2 << " " << y2 <<endl;
-//      cout<< p_uv.x << " " << p_uv.y << " " << u0 << " " << v0 << " " << u1 << " " << v1 << " " << u2 << " " << v2 <<endl;
-//      cout<< endl;
+      Vector2D p_dx_uv = transfer_point(point.first + 1.5f, point.second + 0.5f, x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2);
+      Vector2D p_dy_uv = transfer_point(point.first + 0.5f, point.second + 1.5f, x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2);
+      SampleParams sampleParams;
+      sampleParams.p_uv = p_uv;
+      sampleParams.p_dx_uv = p_dx_uv;
+      sampleParams.p_dy_uv = p_dy_uv;
+      sampleParams.psm = psm;
+      sampleParams.lsm = lsm;
       Color color;
-      if (psm == 0)
-        color = tex.sample_nearest(p_uv,0);
-      else
-        color = tex.sample_bilinear(p_uv,0);
+      color = tex.sample(sampleParams);
       fill_pixel(point.first, point.second, color);
     }
   }

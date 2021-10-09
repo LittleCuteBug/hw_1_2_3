@@ -8,10 +8,10 @@ namespace CGL {
 
   Color Texture::sample(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
-
-
-// return magenta for invalid level
-    return Color(1, 0, 1);
+    if (sp.psm == 0)
+      return sample_nearest(sp.p_uv,0);
+    else
+      return sample_bilinear(sp.p_uv,0);
   }
 
   float Texture::get_level(const SampleParams& sp) {
